@@ -246,6 +246,32 @@ class Score:
         screen.blit(self.image, self.rect)
 
 
+# 追加機能２：重力場
+class Gravity(pg.sprite.Sprite):
+    """
+    重力場のクラス
+    発動時に透明度のある黒い矩形を表示し、範囲内の爆弾や敵機を打ち落とす
+    """
+    def __init__(self, life: int):
+        """
+        重力場を発生させる
+        引数 life: 発動時間
+        """
+        super().__init__()
+        self.image = pg.Surface((WIDTH, HEIGHT), pg.SRCALPHA)  # 透明度のあるSurface
+        self.image.fill((0, 0, 0, 128))  # 透明度128の黒
+        self.rect = self.image.get_rect()
+        self.life = life  # 発動時間
+
+    def update(self):
+        """
+        重力場の発動時間を減算し、範囲内の爆弾や敵機を削除する
+        """
+        self.life -= 1
+        if self.life < 0:
+            self.kill()  # 削除
+
+
 def main():
     pg.display.set_caption("真！こうかとん無双")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -257,6 +283,7 @@ def main():
     beams = pg.sprite.Group()
     exps = pg.sprite.Group()
     emys = pg.sprite.Group()
+    gravities = pg.sprite.Group()
 
     tmr = 0
     clock = pg.time.Clock()
@@ -265,8 +292,12 @@ def main():
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return 0
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
-                beams.add(Beam(bird))
+            if event.type == pg.KEYDOWN:
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
+                    beams.add(Beam(bird))
+                if event.key == pg.K_RETURN and score.value >= 200: # スコアが200以上
+                    gravities.add(Gravity(400))
+                    score.value -= 200
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
@@ -283,6 +314,11 @@ def main():
             bird.change_img(6, screen)  # こうかとん喜びエフェクト
 
         for bomb in pg.sprite.groupcollide(bombs, beams, True, True).keys():
+            exps.add(Explosion(bomb, 50))  # 爆発エフェクト
+            score.value += 1  # 1点アップ
+
+        # 重力場と爆弾・敵機の衝突判定
+        for bomb in pg.sprite.groupcollide(bombs, gravities, True, False).keys():
             exps.add(Explosion(bomb, 50))  # 爆発エフェクト
             score.value += 1  # 1点アップ
 
@@ -303,6 +339,8 @@ def main():
         exps.update()
         exps.draw(screen)
         score.update(screen)
+        gravities.update()  # 重力場の更新
+        gravities.draw(screen)  # 重力場の描画
         pg.display.update()
         tmr += 1
         clock.tick(50)
