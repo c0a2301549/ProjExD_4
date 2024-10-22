@@ -220,7 +220,7 @@ class Enemy(pg.sprite.Sprite):
         if self.rect.centery > self.bound:
             self.vy = 0
             self.state = "stop"
-        self.rect.move_ip(vx, vy)
+        self.rect.move_ip(self.vx, self.vy)
 
 
 class Score:
@@ -241,6 +241,57 @@ class Score:
         self.image = self.font.render(f"Score: {self.value}", 0, self.color)
         screen.blit(self.image, self.rect)
 
+#追加機能３
+class EMP(pg.sprite.Sprite):
+    """
+    電磁パルス（EMP）に関するクラス
+    発動時に敵機と爆弾を無効化し、画面に一時的に黄色の矩形を表示する
+    """
+    def __init__(self, enemies: pg.sprite.Group, bombs: pg.sprite.Group, screen: pg.Surface):
+        super().__init__()
+        self.enemies = enemies # 敵機のグループ
+        self.bombs = bombs # 爆弾のグループ
+
+        # 空のSurfaceインスタンスを生成
+        self.image = pg.Surface((WIDTH, HEIGHT))
+        
+        # 黄色の矩形を描画
+        pg.draw.rect(self.image, (255, 255, 0), (0, 0, WIDTH, HEIGHT))  
+        
+        # 透明度を設定
+        self.image.set_alpha(128)  
+
+        self.rect = self.image.get_rect()
+        self.duration = 3  # 矩形の表示時間（フレーム）
+
+        # 敵機と爆弾を無効化
+        self.disable_enemies()
+        self.disable_bombs()
+
+    def disable_enemies(self):
+        """
+        敵機を無効化する（爆弾を投下できなくする）
+        """
+        for enemy in self.enemies:
+            enemy.interval = float('inf')  # 爆弾を投下できなくする
+            # ラプラシアンフィルタを適用（見た目の無効化）
+            enemy.image = pg.transform.laplacian(enemy.image)  # 疑似コードとしてラプラシアンフィルタを適用
+
+    def disable_bombs(self):
+        """
+        爆弾を無効化する（速度を半減、起爆を無効化）
+        """
+        for bomb in self.bombs:
+            bomb.speed *= 0.5  # 速度を半減
+            bomb.state = "inactive"  # 爆弾を無効化状態にする
+
+    def update(self):
+        """
+        電磁パルスの効果が続く時間をカウントダウンし、効果終了後に自動的に削除
+        """
+        self.duration -= 1
+        if self.duration <= 0:
+            self.kill()
 
 def main():
     pg.display.set_caption("真！こうかとん無双")
@@ -263,6 +314,11 @@ def main():
                 return 0
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                 beams.add(Beam(bird))
+            # 追加機能３
+            if event.type == pg.KEYDOWN and event.key == pg.K_e and score.value > 20:
+                    emp = EMP(emys, bombs, screen)
+                    score.value -= 20  # スコアを消費
+                    exps.add(emp)  # EMPを追加
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
