@@ -145,6 +145,7 @@ class Beam(pg.sprite.Sprite):
         """
         ビーム画像Surfaceを生成する
         引数 bird：ビームを放つこうかとん
+        引数 bird：ビームの角度
         """
         super().__init__()
         self.vx, self.vy = bird.dire
