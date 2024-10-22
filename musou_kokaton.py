@@ -145,14 +145,15 @@ class Beam(pg.sprite.Sprite):
     """
     ビームに関するクラス
     """
-    def __init__(self, bird: Bird):
+    def __init__(self, bird: Bird, angle0: float = 0):
         """
         ビーム画像Surfaceを生成する
         引数 bird：ビームを放つこうかとん
+        引数 bird：ビームの角度
         """
         super().__init__()
         self.vx, self.vy = bird.dire
-        angle = math.degrees(math.atan2(-self.vy, self.vx))
+        angle = math.degrees(math.atan2(-self.vy, self.vx))+angle0
         self.image = pg.transform.rotozoom(pg.image.load(f"fig/beam.png"), angle, 2.0)
         self.vx = math.cos(math.radians(angle))
         self.vy = -math.sin(math.radians(angle))
@@ -170,7 +171,40 @@ class Beam(pg.sprite.Sprite):
         if check_bound(self.rect) != (True, True):
             self.kill()
 
+class NeoBeam:
+    """
+    追加機能６：弾幕に関するクラス 
+    引数 bird：ビームを放つこうかとん
+    引数 num：ビームの数
+    """
+    def __init__(self, bird:Bird, num:int):
+        super().__init__()
+        self.bird = bird
+        self.num = num
+        self.beams = pg.sprite.Group()
 
+    def gen_beams(self) -> list[Beam]:
+        return [Beam(self.bird, angle) for angle in range (-50, +51, int(100/(self.num-1)))]
+        #angles = self.calc_angles(self.num)
+        #for angle in angles:
+            #beam = Beam(self.bird, angle)
+            #self.beams.add(beam)
+        
+    
+    #def calc_angles(self, num):
+        #step = 100 // (num -1) if num > 1 else 0
+        #return list(range(-50, 51, step))
+    
+    #def update(self):
+        #self.beams.update()
+    
+    #def draw(self,screen):
+        #self.beams.draw(screen)
+
+
+
+    
+    
 class Explosion(pg.sprite.Sprite):
     """
     爆発に関するクラス
@@ -389,11 +423,15 @@ def main():
             if event.type == pg.QUIT:
                 return 0
             if event.type == pg.KEYDOWN:
+                if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and key_lst[pg.K_LSHIFT]:
+                    beams.add(NeoBeam(bird, 5).gen_beams())
                 if event.type == pg.KEYDOWN and event.key == pg.K_SPACE:
                     beams.add(Beam(bird))
                 if event.key == pg.K_RETURN and score.value >= 200: # スコアが200以上
                     gravities.add(Gravity(400))
                     score.value -= 200
+
+
             # 追加機能３
                 if event.type == pg.KEYDOWN and event.key == pg.K_e and score.value > 20:
                         emp = EMP(emys, bombs, screen)
@@ -404,12 +442,13 @@ def main():
                 shield = Shield(bird, 50)  
                 shields.add(shield)  # 防御壁グループに追加
                 score.value -= 50  # スコアを50消費    
+
         screen.blit(bg_img, [0, 0])
 
         if tmr%200 == 0:  # 200フレームに1回，敵機を出現させる
             emys.add(Enemy())
 
-        for emy in emys:
+        for emy in emys: 
             if emy.state == "stop" and tmr%emy.interval == 0:
                 # 敵機が停止状態に入ったら，intervalに応じて爆弾投下
                 bombs.add(Bomb(emy, bird))
@@ -455,7 +494,7 @@ def main():
         gravities.draw(screen)  # 重力場の描画
         pg.display.update()
         tmr += 1
-        clock.tick(50)
+        clock.tick(60)
 
 
 if __name__ == "__main__":
